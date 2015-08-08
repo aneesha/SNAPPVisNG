@@ -124,12 +124,105 @@ function GenerateVNAFileFormat(nodes,edges)
 	return vnaBuilder;
 }
 
+function DownLoadFile(contents, mimetype)
+{
+	var pom = document.createElement('a');
+	var blob = new Blob([contents],{type: mimetype});
+	var url = URL.createObjectURL(blob);
+	pom.href = url;
+	pom.setAttribute('download', 'sna_extract.vna');
+	pom.click();
+}
+
+var crawlcomplete = function() {
+	var vna_format = GenerateVNAFileFormat(forumusers,replies);
+	DownLoadFile(vna_format, 'text/plain;charset=utf-8;');
+	$('#status').html("Finished");
+	console.log("done");
+};
 
 /* Moodle Specific Functions */
-
-function PerformSocialAnalysisMoodle()
+function Crawl(LMS)
 {
-	  allForumPostsTables = jQuery(".forumpost");
+	if (LMS == "moodle")
+	{
+		MoodlePageCrawl();
+	}
+}
+
+function MoodlePageCrawl()
+{
+	$('#status').html("Crawling...");
+	GetMoodleDiscussionLinks("firstpage", ""); // first get current page discussion links
+	GetMoodleDiscussionPages(); // get all pages from first page (paging)
+	requests = [];
+	// get all links from each page of discussion links
+	for(i = 0; i < discussionPageList.length; i++) {
+		requests.push($.get(discussionPageList[i], null,  function(data, textStatus)
+		{
+			GetMoodleDiscussionLinks("",data);
+		}));
+	}
+	$.when.apply(undefined, requests).then(function(results){MoodleForumCrawl()});
+}
+
+var MoodleForumCrawl = function()
+{
+	requests = [];
+	// go to each discussion and extract the sna data
+	for (i=0; i < discussionList.length; i++)
+	{
+		requests.push($.get(discussionList[i], null,  function(data, textStatus)
+		{
+			PerformSocialAnalysisMoodle("",data);
+		}));
+	}
+	$.when.apply(undefined, requests).then(function(results){crawlcomplete()});
+}
+
+function GetMoodleDiscussionLinks(page, data)
+{
+	var allDiscussionLinks;
+	if (page=="firstpage")
+	{
+		allDiscussionLinks = jQuery(".topic a");
+	}
+	else
+	{
+		allDiscussionLinks = jQuery(".topic a",data)
+	}
+	for (i=0; i < allDiscussionLinks.length; i++)
+	{
+		discussionList[i] = jQuery(allDiscussionLinks[i]).attr('href');
+	}
+}
+
+function GetMoodleDiscussionPages()
+{
+	var domainname;
+	var allDiscussionPages = jQuery(".paging a");
+
+	domainname = document.location.href
+	domainname = domainname.substring(0,domainname.indexOf('view.php'));
+
+	for (i=1; i < allDiscussionPages.length; i++)
+	{
+		discussionPageList[i] = domainname + jQuery(allDiscussionPages[i]).attr('href');
+	}
+}
+
+function PerformSocialAnalysisMoodle(page,data)
+{
+		var allForumPostsTables;
+		if (page=="firstpage")
+		{
+			allForumPostsTables = jQuery(".forumpost");
+		}
+		else
+		{
+			allForumPostsTables = jQuery(".forumpost",data)
+		}
+
 	  for (i=0; i < allForumPostsTables.length; i++)
 	  {
 			currentPost = allForumPostsTables[i];
@@ -202,23 +295,28 @@ var postsbyusers = "";
 var totalposts = 0;
 var threadowners = {};
 var replies = {};
+var discussionList = [];
+var discussionPageList = [];
+
+var snappcrawlstate = "stopped";
 
 /* Central Processing */
-if ((docLocation.indexOf("mod/forum/discuss.php") != -1) || (docLocation.indexOf("mod/forum/view.php") != -1))
+if (docLocation.indexOf("mod/forum/discuss.php") != -1)
 {
-  console.log("Found Moodle")
+  console.log("Found Moodle Discussion Page")
   // Moodle Individual Thread View && Moodle Forum View with links to Multiple Threads
   foundLMSForum = "Yes"; foundLMSForumExpanded = "Yes"; LMS = "moodle";
-	PerformSocialAnalysisMoodle();
+	PerformSocialAnalysisMoodle("firstpage","");
 	console.log(forumusers);
 	console.log(replies);
 	var vna_format = GenerateVNAFileFormat(forumusers,replies)
-	var pom = document.createElement('a');
-	var blob = new Blob([vna_format],{type: 'text/plain;charset=utf-8;'});
-	var url = URL.createObjectURL(blob);
-	pom.href = url;
-	pom.setAttribute('download', 'sna_extract.vna');
-	pom.click();
+	DownLoadFile(vna_format, 'text/plain;charset=utf-8;')
+}
+else if (docLocation.indexOf("mod/forum/view.php") != -1)
+{
+	console.log("Moodle Multiple Forum Page Found")
+	foundLMSForum = "Yes"; foundLMSForumExpanded = "Yes"; LMS = "moodle";
+	Crawl(LMS);
 }
 else
 {

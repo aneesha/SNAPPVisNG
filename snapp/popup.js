@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', function() {
     chrome.tabs.executeScript(null, { file: "jquery-2.1.4.min.js" }, function() {
     chrome.tabs.executeScript(null, { file: "snapp.js" });
     });
-    window.close();
-
+    //window.close();
   }, false);
 }, false);
