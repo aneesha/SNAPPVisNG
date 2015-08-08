@@ -137,7 +137,7 @@ function DownLoadFile(contents, mimetype)
 var crawlcomplete = function() {
 	var vna_format = GenerateVNAFileFormat(forumusers,replies);
 	DownLoadFile(vna_format, 'text/plain;charset=utf-8;');
-	$('#status').html("Finished");
+	$('#course-header').html("SNAPP - SNA Extraction Complete.");
 	console.log("done");
 };
 
@@ -152,7 +152,7 @@ function Crawl(LMS)
 
 function MoodlePageCrawl()
 {
-	$('#status').html("Crawling...");
+	$('#course-header').html("SNAPP - SNA Extraction in Progress...");
 	GetMoodleDiscussionLinks("firstpage", ""); // first get current page discussion links
 	GetMoodleDiscussionPages(); // get all pages from first page (paging)
 	requests = [];
