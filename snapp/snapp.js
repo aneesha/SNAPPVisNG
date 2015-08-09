@@ -155,25 +155,32 @@ function MoodlePageCrawl()
 	$('#course-header').html("SNAPP - SNA Extraction in Progress...");
 	GetMoodleDiscussionLinks("firstpage", ""); // first get current page discussion links
 	GetMoodleDiscussionPages(); // get all pages from first page (paging)
+	//console.log(discussionPageList,discussionPageList.length);
+
 	requests = [];
 	// get all links from each page of discussion links
 	for(i = 0; i < discussionPageList.length; i++) {
 		requests.push($.get(discussionPageList[i], null,  function(data, textStatus)
 		{
+			console.log("Getting Forum List");
 			GetMoodleDiscussionLinks("",data);
 		}));
 	}
+	//console.log(discussionList);
 	$.when.apply(undefined, requests).then(function(results){MoodleForumCrawl()});
+
 }
 
 var MoodleForumCrawl = function()
 {
+	//console.log(discussionList,discussionList.length);
 	requests = [];
 	// go to each discussion and extract the sna data
 	for (i=0; i < discussionList.length; i++)
 	{
 		requests.push($.get(discussionList[i], null,  function(data, textStatus)
 		{
+			console.log("Collecting SNA Data");
 			PerformSocialAnalysisMoodle("",data);
 		}));
 	}
@@ -193,21 +200,22 @@ function GetMoodleDiscussionLinks(page, data)
 	}
 	for (i=0; i < allDiscussionLinks.length; i++)
 	{
-		discussionList[i] = jQuery(allDiscussionLinks[i]).attr('href');
+		discussionList.push(jQuery(allDiscussionLinks[i]).attr('href'));
 	}
 }
 
 function GetMoodleDiscussionPages()
 {
 	var domainname;
-	var allDiscussionPages = jQuery(".paging a");
+	var pagingcontainers = jQuery(".paging");
+	var allDiscussionPages = jQuery("a", pagingcontainers[0]);
 
 	domainname = document.location.href
 	domainname = domainname.substring(0,domainname.indexOf('view.php'));
 
 	for (i=1; i < allDiscussionPages.length; i++)
 	{
-		discussionPageList[i] = domainname + jQuery(allDiscussionPages[i]).attr('href');
+		discussionPageList.push(domainname + jQuery(allDiscussionPages[i]).attr('href'));
 	}
 }
 
